@@ -190,7 +190,7 @@ header{ position:sticky; top:0; z-index:50; background:var(--main); color:#fff;
     </div>
     <div class="frow" style="margin-top:12px">
       <button type="button" class="step" id="danMinus">−</button>
-      <div class="fcol"><div class="flabel">段数（1段=8枚） <button type="button" class="calcmini" data-t="sh-dan">🖩</button></div><input class="finput" id="sh-dan" inputmode="numeric" placeholder="0"></div>
+      <div class="fcol"><div class="flabel">段数（1段=8枚）</div><select class="finput" id="sh-dan"></select></div>
       <button type="button" class="step" id="danPlus">＋</button>
     </div>
     <div id="sh-conv"></div>
@@ -397,9 +397,11 @@ function setTab(t){
 /* ===== 入力シート（チップ選択式）===== */
 const SAGYO_LIST=["埋木","穴あけ"];
 const LEN_LIST=["2m","3m","4m"];
-const WHO_LIST=["林大樹","林楓"];
+const WHO_LIST=["雅久","智恵子","大樹","楓"];
+const DAN_DEFAULT=20, DAN_MAX=99; // プルダウンは20起点で上下に選ぶ
 const CUSTOM_KEYS={who:"umeki_custom_who"};
 let selSagyo="",selLen="",selWho=localStorage.getItem(WHO_KEY)||"";
+if(selWho==="林大樹") selWho="大樹"; else if(selWho==="林楓") selWho="楓"; // 旧名の端末記憶を移行
 function customList(k){ return loadLS(CUSTOM_KEYS[k],[]); }
 function addCustom(k,v){ const l=customList(k); if(!l.includes(v)){ l.push(v); saveLS(CUSTOM_KEYS[k],l); } }
 function chipsHtml(list,sel){ return list.map(v=>'<button type="button" class="chip'+(sel===v?" sel":"")+'" data-v="'+esc(v)+'">'+esc(v)+'</button>').join(""); }
@@ -430,19 +432,26 @@ function openSheet(row){
     $("selWrap").style.display="";
   }
   renderChips(); // 直前の選択を保持（連続入力が速い）
-  $("sh-dan").value=row?(row.dan||""):"";
+  $("sh-dan").value=String(row?(Number(row.dan)||DAN_DEFAULT):DAN_DEFAULT);
   $("sh-del").style.display=row?"":"none";
   $("sh-save").textContent=row?"保存":"記録する";
   updateConv();
   $("shOvl").classList.add("show");
-  if(!row) setTimeout(()=>$("sh-dan").focus(),150);
 }
+// 段数プルダウン（1〜DAN_MAX段・開いたとき20が選択済みで上下に選べる）
+(function(){
+  const sel=$("sh-dan");
+  let html="";
+  for(let i=1;i<=DAN_MAX;i++) html+='<option value="'+i+'">'+i+'段</option>';
+  sel.innerHTML=html;
+  sel.value=String(DAN_DEFAULT);
+})();
 function closeSheet(){ $("shOvl").classList.remove("show"); editingId=null; }
 $("sh-cancel").onclick=closeSheet;
 $("shOvl").addEventListener("click",e=>{ if(e.target===$("shOvl")) closeSheet(); });
-$("sh-dan").addEventListener("input",updateConv);
-$("danPlus").onclick=()=>{ $("sh-dan").value=(Number($("sh-dan").value)||0)+1; updateConv(); };
-$("danMinus").onclick=()=>{ const v=(Number($("sh-dan").value)||0)-1; $("sh-dan").value=v>0?v:""; updateConv(); };
+$("sh-dan").addEventListener("change",updateConv);
+$("danPlus").onclick=()=>{ const v=Math.min(DAN_MAX,(Number($("sh-dan").value)||0)+1); $("sh-dan").value=String(v); updateConv(); };
+$("danMinus").onclick=()=>{ const v=Math.max(1,(Number($("sh-dan").value)||0)-1); $("sh-dan").value=String(v); updateConv(); };
 function updateConv(){
   const dan=Number($("sh-dan").value||0);
   $("sh-conv").innerHTML=dan>0?("→ 8入 <b>"+dan.toLocaleString()+"束</b>　<small>（"+(dan*MAI_PER_DAN).toLocaleString()+"枚）</small>"):"";
