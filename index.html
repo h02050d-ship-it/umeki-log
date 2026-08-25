@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#5d4037">
+<title>埋木・穴あけ記録</title>
+<link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="20" fill="%235d4037"/><text x="50" y="72" font-size="60" text-anchor="middle" fill="white" font-family="sans-serif">埋</text></svg>'>
+<style>
+:root{
+  --main:#5d4037; --main-dk:#3e2723; --accent:#ff8f00; --bg:#f6f3f1; --card:#fff;
+  --text:#2b211e; --sub:#8a7a73; --line:#e6ddd8; --danger:#c62828; --info:#1565c0;
+  --ume:#5d4037; --ana:#1565c0;
+}
+*{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html,body{ margin:0; padding:0; background:var(--bg); color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif; }
+body{ padding-bottom:80px; }
+button{ font-family:inherit; }
+
+/* ===== ヘッダー ===== */
+header{ position:sticky; top:0; z-index:50; background:var(--main); color:#fff;
+  padding:10px 12px 8px; box-shadow:0 2px 8px rgba(0,0,0,.18); }
+.h-row{ display:flex; align-items:center; gap:8px; }
+.h-title{ font-size:17px; font-weight:700; letter-spacing:1px; display:flex; align-items:center; gap:6px; }
+.h-title .ico{ background:#fff; color:var(--main); border-radius:6px; width:24px; height:24px;
+  display:inline-flex; align-items:center; justify-content:center; font-size:15px; font-weight:800; }
+.h-sp{ flex:1; }
+#h-date{ border:none; border-radius:8px; padding:6px 8px; font-size:14px; font-weight:600; color:var(--main-dk); background:#fff; }
+.h-btn{ background:rgba(255,255,255,.16); border:none; color:#fff; border-radius:8px;
+  padding:7px 10px; font-size:16px; line-height:1; }
+.h-btn:active{ background:rgba(255,255,255,.3); }
+
+/* ===== 集計バー ===== */
+#statbar{ display:flex; gap:6px; margin-top:8px; }
+.stat{ flex:1; background:rgba(255,255,255,.13); border-radius:8px; padding:4px 6px; text-align:center; }
+.stat b{ font-size:16px; display:block; }
+.stat span{ font-size:10px; opacity:.85; }
+#pendBadge{ display:none; background:var(--accent); border-radius:8px; padding:4px 8px; text-align:center; font-size:11px; font-weight:700; }
+
+/* ===== タブ ===== */
+#tabs{ display:flex; background:var(--card); border-bottom:1px solid var(--line); position:sticky; top:96px; z-index:40; }
+.tab{ flex:1; border:none; background:none; padding:11px 0; font-size:14px; font-weight:600; color:var(--sub);
+  border-bottom:3px solid transparent; }
+.tab.on{ color:var(--main); border-bottom-color:var(--main); }
+
+/* ===== 入力タブ ===== */
+.item{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:10px 12px;
+  margin-bottom:7px; display:flex; align-items:center; gap:10px; }
+.item:active{ background:#efebe9; }
+.item .nm{ font-size:15px; font-weight:700; }
+.item .spec{ font-size:12.5px; color:var(--sub); margin-top:2px; }
+.item .cnt{ margin-left:auto; text-align:right; flex-shrink:0; }
+.item .cnt .done{ display:inline-block; background:#efebe9; color:var(--main); font-size:13px; font-weight:700;
+  border-radius:8px; padding:3px 8px; }
+.sagyob{ display:inline-block; font-size:11px; font-weight:700; border-radius:6px; padding:2px 6px; margin-right:6px; vertical-align:1px; color:#fff; }
+.empty{ text-align:center; color:var(--sub); padding:40px 20px; font-size:13.5px; }
+.empty .big{ font-size:34px; margin-bottom:8px; }
+.spin{ width:26px; height:26px; border:3px solid var(--line); border-top-color:var(--main);
+  border-radius:50%; margin:0 auto 10px; animation:sp 1s linear infinite; }
+@keyframes sp{ to{ transform:rotate(360deg); } }
+
+/* ===== 集計タブ ===== */
+#sumTab{ display:none; padding:10px 12px; }
+.sumgrid{ display:grid; grid-template-columns:64px 1fr 1fr; gap:0; background:var(--card);
+  border:1px solid var(--line); border-radius:12px; overflow:hidden; margin-bottom:12px; }
+.sumgrid>div{ padding:9px 8px; font-size:13px; border-top:1px solid var(--line); }
+.sumgrid>.hd{ border-top:none; background:#efebe9; font-weight:700; font-size:12.5px; text-align:center; }
+.sumgrid>.lbl{ font-weight:700; color:var(--sub); font-size:12px; display:flex; align-items:center; }
+.sumgrid>.val{ text-align:center; font-weight:700; font-size:15px; }
+.sumgrid>.val small{ display:block; font-weight:500; font-size:10.5px; color:var(--sub); }
+.grp{ background:var(--card); border:1px solid var(--line); border-radius:12px; margin-bottom:10px; overflow:hidden; }
+.grp-h{ padding:9px 12px; background:#efebe9; display:flex; align-items:baseline; gap:8px; }
+.grp-h .nm{ font-size:14px; font-weight:700; }
+.grp-h .sum{ margin-left:auto; font-size:13px; font-weight:700; color:var(--main); white-space:nowrap; }
+.row{ display:flex; align-items:center; padding:9px 12px; border-top:1px solid var(--line); font-size:13.5px; gap:8px; }
+.row .qty{ font-weight:700; font-size:14px; }
+.row .meta{ color:var(--sub); font-size:11.5px; margin-left:auto; text-align:right; }
+.sync-p{ color:var(--accent); font-weight:700; font-size:11px; }
+
+/* ===== ボトムシート ===== */
+.ovl{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:100; }
+.ovl.show{ display:flex; align-items:flex-end; }
+.sheet{ background:#fff; width:100%; border-radius:18px 18px 0 0; padding:16px 16px 22px; max-height:92vh; overflow-y:auto; }
+.sh-item{ font-size:16px; font-weight:700; }
+.sh-spec{ font-size:13px; color:var(--sub); margin-top:2px; margin-bottom:12px; }
+.frow{ display:flex; gap:10px; margin-bottom:10px; }
+.fcol{ flex:1; }
+.flabel{ font-size:12px; font-weight:600; color:var(--sub); margin-bottom:4px; }
+.finput{ width:100%; border:1.5px solid var(--line); border-radius:10px; padding:10px; font-size:22px;
+  font-weight:700; text-align:center; background:#fff; color:var(--text); }
+.finput:focus{ outline:none; border-color:var(--main); }
+#sh-conv{ font-size:14px; font-weight:700; color:var(--main); text-align:center; margin:-2px 0 10px; min-height:20px; }
+#sh-conv small{ font-weight:500; color:var(--sub); }
+.chips{ display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
+.chip{ border:1px solid var(--line); background:#f8f5f3; border-radius:14px; padding:5px 11px; font-size:12.5px; color:var(--text); }
+.chip:active{ background:#efebe9; border-color:var(--main); }
+.chips.big .chip{ padding:11px 18px; font-size:15px; font-weight:600; border-radius:12px; }
+.chip.sel{ background:var(--main); border-color:var(--main); color:#fff; font-weight:700; }
+.chip.add{ border-style:dashed; border-color:var(--main); color:var(--main); background:#fff; }
+.calcmini{ border:1px solid var(--line); background:#f8f5f3; border-radius:8px; padding:2px 9px; font-size:14px; margin-left:6px; vertical-align:-2px; }
+.calcmini:active{ background:#efebe9; }
+.step{ flex:0 0 56px; border:1.5px solid var(--line); background:#f8f5f3; border-radius:10px; font-size:20px; font-weight:700; color:var(--main); }
+.step:active{ background:#efebe9; }
+#bigAdd{ width:100%; padding:18px 0; font-size:18px; border-radius:14px; }
+.sh-btns{ display:flex; gap:10px; margin-top:14px; }
+.btn{ flex:1; border:none; border-radius:12px; padding:14px 0; font-size:16px; font-weight:700; }
+.btn-main{ background:var(--main); color:#fff; }
+.btn-main:active{ background:var(--main-dk); }
+.btn-sub{ background:#eceff1; color:var(--text); }
+.btn-del{ background:#fdecea; color:var(--danger); flex:0 0 84px; }
+
+/* ===== 電卓 ===== */
+#calcOvl .sheet{ padding-bottom:26px; }
+#calcDisp{ background:#f6f3f1; border-radius:12px; padding:10px 14px; margin-bottom:12px; text-align:right; }
+#calcExpr{ font-size:15px; color:var(--sub); min-height:20px; word-break:break-all; }
+#calcRes{ font-size:30px; font-weight:800; min-height:38px; }
+#calcGrid{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+.ck{ border:none; border-radius:12px; padding:15px 0; font-size:21px; font-weight:700; background:#f1ebe8; color:var(--text); }
+.ck:active{ background:#e3d9d4; }
+.ck.op{ background:#efebe9; color:var(--main-dk); }
+.ck.eq{ background:var(--main); color:#fff; }
+.ck.cl{ background:#fdecea; color:var(--danger); }
+
+/* ===== トースト ===== */
+#toast{ position:fixed; left:50%; bottom:88px; transform:translateX(-50%) translateY(20px);
+  background:#263238; color:#fff; padding:10px 18px; border-radius:22px; font-size:13.5px;
+  opacity:0; pointer-events:none; transition:.25s; z-index:300; white-space:nowrap; }
+#toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+/* ===== ログインゲート ===== */
+#gate{ display:none; position:fixed; inset:0; background:var(--bg); z-index:200;
+  align-items:center; justify-content:center; padding:24px; }
+.gate-card{ background:#fff; border-radius:16px; padding:26px 22px; width:100%; max-width:340px;
+  box-shadow:0 8px 30px rgba(0,0,0,.12); }
+.gate-card h1{ font-size:18px; margin:0 0 4px; color:var(--main-dk); }
+.gate-card p{ font-size:12.5px; color:var(--sub); margin:0 0 16px; }
+.gate-card input{ width:100%; border:1.5px solid var(--line); border-radius:10px; padding:12px;
+  font-size:16px; margin-bottom:10px; }
+.gate-card input:focus{ outline:none; border-color:var(--main); }
+#gateErr{ color:var(--danger); font-size:12.5px; min-height:18px; margin-bottom:4px; }
+#gateBtn{ width:100%; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="h-row">
+    <div class="h-title"><span class="ico">埋</span>埋木・穴あけ記録</div>
+    <div class="h-sp"></div>
+    <input type="date" id="h-date">
+    <button class="h-btn" id="calcBtn" title="電卓">🖩</button>
+    <button class="h-btn" id="menuBtn" title="メニュー">⋮</button>
+  </div>
+  <div id="statbar">
+    <div class="stat"><b id="st-ume">0</b><span>埋木（束）</span></div>
+    <div class="stat"><b id="st-ana">0</b><span>穴あけ（束）</span></div>
+    <div class="stat"><b id="st-maisu">0</b><span>枚数</span></div>
+    <div class="stat" id="pendBadge"><b id="st-pend">0</b><span>未送信</span></div>
+  </div>
+</header>
+
+<div id="tabs">
+  <button class="tab on" id="tabInput">📝 入力</button>
+  <button class="tab" id="tabSum">📊 集計</button>
+</div>
+
+<div id="inputTab">
+  <div style="padding:14px 12px 6px">
+    <button class="btn btn-main" id="bigAdd">＋ 作業を記録</button>
+  </div>
+  <div id="recentWrap" style="padding:4px 12px 10px"></div>
+</div>
+
+<div id="sumTab">
+  <div class="flabel" style="margin:4px 2px 6px">期間別の8入束数（埋木／穴あけ）</div>
+  <div class="sumgrid" id="sumGrid"></div>
+  <div class="flabel" style="margin:0 2px 6px">日別の記録</div>
+  <div id="sumBody"><div class="empty">まだ記録がありません</div></div>
+</div>
+
+<!-- 入力シート -->
+<div class="ovl" id="shOvl">
+  <div class="sheet" id="shSheet">
+    <div class="sh-item" id="sh-title">作業を記録</div>
+    <div class="sh-spec" id="sh-sub">作業→長さ→段数の順にタップ（1段=8枚固定）</div>
+    <div id="selWrap">
+      <div class="flabel">作業</div><div class="chips big" id="sagyoChips"></div>
+      <div class="flabel" style="margin-top:12px">長さ</div><div class="chips big" id="lenChips"></div>
+    </div>
+    <div class="frow" style="margin-top:12px">
+      <button type="button" class="step" id="danMinus">−</button>
+      <div class="fcol"><div class="flabel">段数（1段=8枚） <button type="button" class="calcmini" data-t="sh-dan">🖩</button></div><input class="finput" id="sh-dan" inputmode="numeric" placeholder="0"></div>
+      <button type="button" class="step" id="danPlus">＋</button>
+    </div>
+    <div id="sh-conv"></div>
+    <div class="fcol" style="margin-top:4px"><div class="flabel">入力者</div><div class="chips big" id="whoChips"></div></div>
+    <div class="sh-btns">
+      <button class="btn btn-del" id="sh-del" style="display:none">削除</button>
+      <button class="btn btn-sub" id="sh-cancel">キャンセル</button>
+      <button class="btn btn-main" id="sh-save">記録する</button>
+    </div>
+  </div>
+</div>
+
+<!-- 電卓 -->
+<div class="ovl" id="calcOvl">
+  <div class="sheet">
+    <div id="calcDisp"><div id="calcExpr">&nbsp;</div><div id="calcRes">0</div></div>
+    <div id="calcGrid">
+      <button class="ck cl" data-k="C">C</button><button class="ck op" data-k="(">(</button><button class="ck op" data-k=")">)</button><button class="ck op" data-k="/">÷</button>
+      <button class="ck" data-k="7">7</button><button class="ck" data-k="8">8</button><button class="ck" data-k="9">9</button><button class="ck op" data-k="*">×</button>
+      <button class="ck" data-k="4">4</button><button class="ck" data-k="5">5</button><button class="ck" data-k="6">6</button><button class="ck op" data-k="-">−</button>
+      <button class="ck" data-k="1">1</button><button class="ck" data-k="2">2</button><button class="ck" data-k="3">3</button><button class="ck op" data-k="+">＋</button>
+      <button class="ck" data-k="0">0</button><button class="ck" data-k=".">.</button><button class="ck" data-k="B">⌫</button><button class="ck eq" data-k="=">＝</button>
+    </div>
+    <div class="sh-btns"><button class="btn btn-sub" id="calcClose">閉じる</button><button class="btn btn-main" id="calcApply" style="display:none">この結果を入力</button></div>
+  </div>
+</div>
+
+<!-- ログイン -->
+<div id="gate">
+  <div class="gate-card">
+    <h1>埋 埋木・穴あけ記録</h1>
+    <p>社内ツール共通のメールアドレスとパスワードでログイン（初回のみ）</p>
+    <input id="gateMail" type="email" placeholder="メールアドレス" autocomplete="username">
+    <input id="gatePass" type="password" placeholder="パスワード" autocomplete="current-password">
+    <div id="gateErr"></div>
+    <button class="btn btn-main" id="gateBtn">ログイン</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+"use strict";
+const GAS_URL="https://script.google.com/macros/s/AKfycbyE2O2zEk1NDYskaxflVtPReblSOyA5CyjfHTNXAYzK6tX1zgEzRypcFFSjtDy2SWa7wg/exec";
+const MAI_PER_DAN=8; // 1段=8枚固定（2m/3m/4m共通）→ 段数=8入束数
+
+/* ===== 資格情報（共通SSO: h02050d-ship-it.github.io の他ツールのログインを引き継ぐ）===== */
+const CRED_KEY="hayazai_umeki_cred";
+const SSO_KEY="hayazai_sso_cred";
+const SSO_PEERS=["hayazai_tanaoroshi_cred","hayazai_board_cred","hayazai_seiso_cred","hayazai_rulebook_cred","hayazai_kaizen_cred","notify_creds_v1","seinodesk_cred","faxdesk_cred","orderdesk_cred","nippou_cred"];
+function ssoFind_(){
+  const keys=[SSO_KEY,CRED_KEY].concat(SSO_PEERS);
+  for(const k of keys){
+    try{ const v=JSON.parse(localStorage.getItem(k)||"null");
+      if(v){ const email=v.email||v.e, pass=v.pass||v.p; if(email&&pass) return {email:String(email),pass:String(pass)}; }
+    }catch(e){}
+  }
+  return null;
+}
+function ssoWrite(email,pass){ try{ localStorage.setItem(SSO_KEY,JSON.stringify({email,pass})); }catch(e){} }
+function ssoClear(){ try{ localStorage.removeItem(SSO_KEY); }catch(e){} }
+function creds(){
+  try{ const v=JSON.parse(localStorage.getItem(CRED_KEY)||"null"); if(v&&v.email&&v.pass) return v; }catch(e){}
+  const s=ssoFind_(); if(s){ try{ localStorage.setItem(CRED_KEY,JSON.stringify(s)); }catch(e){} return s; }
+  return {};
+}
+function saveCreds(email,pass){ localStorage.setItem(CRED_KEY,JSON.stringify({email,pass})); ssoWrite(email,pass); }
+function clearCreds(){ localStorage.removeItem(CRED_KEY); ssoClear(); }
+
+/* ===== ユーティリティ ===== */
+const $=id=>document.getElementById(id);
+function esc(s){ return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m])); }
+let toastTimer=null;
+function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove("show"),2200); }
+function todayStr(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function newId(){ return Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,8); }
+function sagyoColor(s){ return s==="穴あけ"?"var(--ana)":"var(--ume)"; }
+
+/* GASは時々HTMLエラーページを返す → JSONでなければ間を空けて最大3回 */
+async function fetchJsonRetry(url,opt){
+  let lastErr=null;
+  for(let i=0;i<3;i++){
+    try{
+      const ctrl=new AbortController(); const to=setTimeout(()=>ctrl.abort(),i===0?25000:15000);
+      let r;
+      try{ r=await fetch(url,Object.assign({signal:ctrl.signal},opt||{})); } finally{ clearTimeout(to); }
+      const t=await r.text();
+      if(t && t.trim()[0]==="{") return JSON.parse(t);
+      lastErr=new Error("bad response");
+    }catch(e){ lastErr=e; }
+    if(i<2) await new Promise(rs=>setTimeout(rs,2000+i*2000));
+  }
+  throw lastErr||new Error("fetch failed");
+}
+function apiGet(action,params){
+  const c=creds();
+  const q=new URLSearchParams(Object.assign({action,pass:c.pass||""},params||{}));
+  return fetchJsonRetry(GAS_URL+"?"+q.toString());
+}
+function apiPost(action,body){
+  const c=creds();
+  return fetchJsonRetry(GAS_URL+"?action="+action,{method:"POST",body:JSON.stringify(Object.assign({pass:c.pass||""},body))});
+}
+
+/* ===== 状態 ===== */
+const ROWS_KEY="umeki_rows_cache_v1";
+const QUEUE_KEY="umeki_queue_v1";
+const WHO_KEY="umeki_who";
+let ROWS=[];             // 全行（サーバ＋未送信）。集計タブは全期間を使う
+let QUEUE=[];            // 未送信操作 [{op,data}]
+let editingId=null;      // シートで編集中の行id（null=新規）
+let curDate=todayStr();
+
+function loadLS(k,def){ try{ const v=JSON.parse(localStorage.getItem(k)||"null"); return v==null?def:v; }catch(e){ return def; } }
+function saveLS(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }
+
+/* ===== 起動 ===== */
+function boot(){
+  $("h-date").value=curDate;
+  QUEUE=loadLS(QUEUE_KEY,[]);
+  const c=creds();
+  if(c.email&&c.pass){
+    $("gate").style.display="none";
+    const cr=loadLS(ROWS_KEY,null); if(cr) ROWS=cr;
+    renderAll();
+    refreshRows(); flushQueue();
+  } else showGate();
+}
+function showGate(err){ $("gate").style.display="flex"; $("gateErr").textContent=err||""; setTimeout(()=>$("gateMail").focus(),80); }
+$("gateBtn").onclick=async()=>{
+  const email=$("gateMail").value.trim(), pass=$("gatePass").value;
+  if(!email||!pass) return;
+  $("gateBtn").disabled=true; $("gateErr").textContent="確認中…";
+  try{
+    const j=await fetchJsonRetry(GAS_URL+"?action=umeList&pass="+encodeURIComponent(pass));
+    if(j&&j.ok){ saveCreds(email,pass); $("gate").style.display="none"; boot(); }
+    else { $("gateErr").textContent="メールまたはパスワードが違います"; }
+  }catch(e){ $("gateErr").textContent="通信に失敗しました。電波の良い場所でもう一度"; }
+  $("gateBtn").disabled=false;
+};
+["gateMail","gatePass"].forEach(id=>$(id).addEventListener("keydown",e=>{ if(e.key==="Enter") $("gateBtn").click(); }));
+$("menuBtn").onclick=()=>{
+  if(confirm("ログアウトしますか？（保存済みデータは消えません）")){ clearCreds(); location.reload(); }
+};
+
+/* ===== データ取得（全期間） ===== */
+async function refreshRows(){
+  try{
+    const j=await apiGet("umeList",{});
+    if(j&&j.ok){
+      const server=j.rows||[];
+      const pendAdds=QUEUE.filter(q=>q.op==="add").map(q=>Object.assign({},q.data,{taba:Number(q.data.dan)||0,maisu:(Number(q.data.dan)||0)*MAI_PER_DAN,sync:"pending"}));
+      const delIds=new Set(QUEUE.filter(q=>q.op==="delete").map(q=>q.data.id));
+      const updMap={}; QUEUE.forEach(q=>{ if(q.op==="update") updMap[q.data.id]=q.data; });
+      ROWS=server.filter(r=>!delIds.has(r.id)).map(r=>{
+        if(updMap[r.id]){ const d=Number(updMap[r.id].dan)||0; return Object.assign({},r,{dan:d,taba:d,maisu:d*MAI_PER_DAN,sync:"pending"}); }
+        return Object.assign(r,{sync:"ok"});
+      }).concat(pendAdds.filter(p=>!server.some(s=>s.id===p.id)));
+      saveLS(ROWS_KEY,ROWS);
+      renderAll();
+    } else if(j&&j.error==="unauthorized"){ clearCreds(); showGate("ログインし直してください"); }
+  }catch(e){ /* キャッシュ表示のまま */ }
+}
+
+/* ===== 未送信キュー ===== */
+let flushing=false;
+async function flushQueue(){
+  if(flushing||!QUEUE.length) return;
+  flushing=true;
+  try{
+    while(QUEUE.length){
+      const q=QUEUE[0];
+      const act=q.op==="add"?"umeAdd":q.op==="update"?"umeUpdate":"umeDelete";
+      const j=await apiPost(act,q.data);
+      if(j&&(j.ok||j.dup||j.missing)){ QUEUE.shift(); saveLS(QUEUE_KEY,QUEUE); updateStats(); }
+      else if(j&&j.error==="unauthorized"){ clearCreds(); showGate("ログインし直してください"); break; }
+      else break; // サーバ側エラー→後で再試行
+    }
+  }catch(e){ /* オフライン等→後で再試行 */ }
+  flushing=false;
+  updateStats();
+  if(!QUEUE.length) refreshRows();
+}
+setInterval(flushQueue,25000);
+document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ flushQueue(); refreshRows(); } });
+function enqueue(op,data){ QUEUE.push({op,data}); saveLS(QUEUE_KEY,QUEUE); flushQueue(); }
+
+/* ===== 日付変更 ===== */
+$("h-date").addEventListener("change",()=>{
+  curDate=$("h-date").value||todayStr();
+  renderAll();
+});
+
+/* ===== タブ ===== */
+$("tabInput").onclick=()=>setTab("input");
+$("tabSum").onclick=()=>{ setTab("sum"); refreshRows(); };
+function setTab(t){
+  $("tabInput").classList.toggle("on",t==="input");
+  $("tabSum").classList.toggle("on",t==="sum");
+  $("inputTab").style.display=t==="input"?"":"none";
+  $("sumTab").style.display=t==="sum"?"block":"none";
+}
+
+/* ===== 入力シート（チップ選択式）===== */
+const SAGYO_LIST=["埋木","穴あけ"];
+const LEN_LIST=["2m","3m","4m"];
+const WHO_LIST=["林大樹","林楓"];
+const CUSTOM_KEYS={who:"umeki_custom_who"};
+let selSagyo="",selLen="",selWho=localStorage.getItem(WHO_KEY)||"";
+function customList(k){ return loadLS(CUSTOM_KEYS[k],[]); }
+function addCustom(k,v){ const l=customList(k); if(!l.includes(v)){ l.push(v); saveLS(CUSTOM_KEYS[k],l); } }
+function chipsHtml(list,sel){ return list.map(v=>'<button type="button" class="chip'+(sel===v?" sel":"")+'" data-v="'+esc(v)+'">'+esc(v)+'</button>').join(""); }
+function bindChips(id,fn){ document.querySelectorAll("#"+id+" .chip").forEach(el=>{ el.onclick=()=>fn(el.dataset.v); }); }
+function renderChips(){
+  $("sagyoChips").innerHTML=chipsHtml(SAGYO_LIST,selSagyo);
+  $("lenChips").innerHTML=chipsHtml(LEN_LIST,selLen);
+  let wl=WHO_LIST.concat(customList("who"));
+  if(selWho&&!wl.includes(selWho)) wl=wl.concat([selWho]);
+  $("whoChips").innerHTML=chipsHtml(wl,selWho)+'<button type="button" class="chip add" data-v="__add">＋登録</button>';
+  bindChips("sagyoChips",v=>{ selSagyo=v; renderChips(); });
+  bindChips("lenChips",v=>{ selLen=v; renderChips(); });
+  bindChips("whoChips",v=>{
+    if(v==="__add"){ const nv=(prompt("登録する入力者名")||"").trim(); if(!nv) return; addCustom("who",nv); selWho=nv; renderChips(); }
+    else { selWho=v; renderChips(); }
+  });
+}
+$("bigAdd").onclick=()=>openSheet(null);
+function openSheet(row){
+  editingId=row?row.id:null;
+  if(row){
+    $("sh-title").textContent=row.sagyo+"　"+row.len+"（"+row.date+"）";
+    $("sh-sub").textContent="段数を直して保存（作業・長さを変えるときは削除して入れ直し）";
+    $("selWrap").style.display="none";
+  } else {
+    $("sh-title").textContent="作業を記録";
+    $("sh-sub").textContent="作業→長さ→段数の順にタップ（1段=8枚固定・日付は"+(curDate===todayStr()?"今日":curDate)+"）";
+    $("selWrap").style.display="";
+  }
+  renderChips(); // 直前の選択を保持（連続入力が速い）
+  $("sh-dan").value=row?(row.dan||""):"";
+  $("sh-del").style.display=row?"":"none";
+  $("sh-save").textContent=row?"保存":"記録する";
+  updateConv();
+  $("shOvl").classList.add("show");
+  if(!row) setTimeout(()=>$("sh-dan").focus(),150);
+}
+function closeSheet(){ $("shOvl").classList.remove("show"); editingId=null; }
+$("sh-cancel").onclick=closeSheet;
+$("shOvl").addEventListener("click",e=>{ if(e.target===$("shOvl")) closeSheet(); });
+$("sh-dan").addEventListener("input",updateConv);
+$("danPlus").onclick=()=>{ $("sh-dan").value=(Number($("sh-dan").value)||0)+1; updateConv(); };
+$("danMinus").onclick=()=>{ const v=(Number($("sh-dan").value)||0)-1; $("sh-dan").value=v>0?v:""; updateConv(); };
+function updateConv(){
+  const dan=Number($("sh-dan").value||0);
+  $("sh-conv").innerHTML=dan>0?("→ 8入 <b>"+dan.toLocaleString()+"束</b>　<small>（"+(dan*MAI_PER_DAN).toLocaleString()+"枚）</small>"):"";
+}
+$("sh-save").onclick=()=>{
+  const dan=Math.floor(Number($("sh-dan").value||0));
+  if(!(dan>0)){ toast("段数を入れてください"); return; }
+  if(!selWho){ toast("入力者を選んでください"); return; }
+  localStorage.setItem(WHO_KEY,selWho);
+  if(editingId){
+    const row=ROWS.find(r=>r.id===editingId); if(!row){ closeSheet(); return; }
+    row.dan=dan; row.taba=dan; row.maisu=dan*MAI_PER_DAN;
+    const qa=QUEUE.find(q=>q.op==="add"&&q.data.id===editingId);
+    if(qa){ qa.data.dan=dan; saveLS(QUEUE_KEY,QUEUE); flushQueue(); }
+    else { row.sync="pending"; enqueue("update",{id:editingId,dan}); }
+    toast("修正しました");
+  } else {
+    if(!selSagyo){ toast("作業（埋木/穴あけ）を選んでください"); return; }
+    if(!selLen){ toast("長さを選んでください"); return; }
+    const row={ id:newId(), date:curDate, sagyo:selSagyo, len:selLen, dan, taba:dan, maisu:dan*MAI_PER_DAN, who:selWho, ts:"", sync:"pending" };
+    ROWS.push(row);
+    enqueue("add",{id:row.id,date:row.date,sagyo:row.sagyo,len:row.len,dan,who:selWho});
+    toast("記録: "+selSagyo+" "+selLen+" "+dan+"段 = "+dan+"束");
+  }
+  saveLS(ROWS_KEY,ROWS);
+  closeSheet(); renderAll();
+};
+$("sh-del").onclick=()=>{
+  if(!editingId) return;
+  if(!confirm("この記録を削除しますか？")) return;
+  ROWS=ROWS.filter(r=>r.id!==editingId);
+  const qi=QUEUE.findIndex(q=>q.op==="add"&&q.data.id===editingId);
+  if(qi>=0){ QUEUE.splice(qi,1); saveLS(QUEUE_KEY,QUEUE); }
+  else enqueue("delete",{id:editingId});
+  saveLS(ROWS_KEY,ROWS);
+  toast("削除しました");
+  closeSheet(); renderAll();
+};
+
+/* ===== 描画 ===== */
+function renderAll(){ updateStats(); renderRecent(); renderSum(); }
+function dayRows(){ return ROWS.filter(r=>r.date===curDate); }
+function renderRecent(){
+  const rows=dayRows();
+  const dayLabel=curDate===todayStr()?"今日":curDate;
+  if(!rows.length){
+    $("recentWrap").innerHTML='<div class="empty"><div class="big">🪵</div>'+esc(dayLabel)+'の記録はまだありません<br><span style="font-size:12px">「＋ 作業を記録」→ 埋木/穴あけ → 長さ → 段数<br>1段=8枚固定なので 段数＝8入の束数です</span></div>';
+    return;
+  }
+  $("recentWrap").innerHTML='<div class="flabel" style="margin:8px 2px 6px">'+esc(dayLabel)+'の記録（タップで修正）</div>'+rows.slice().reverse().map(r=>{
+    return '<div class="item" data-id="'+esc(r.id)+'">'+
+      '<div><div class="nm"><span class="sagyob" style="background:'+sagyoColor(r.sagyo)+'">'+esc(r.sagyo)+'</span>'+esc(r.len)+'</div>'+
+      '<div class="spec">'+esc(r.who||"")+'　'+esc((r.ts||"").slice(11,16))+'</div></div>'+
+      '<div class="cnt"><span class="done">'+(Number(r.dan)||0)+'段＝'+(Number(r.taba)||0)+'束</span>'+
+      (r.sync==="pending"?'<div class="sync-p">●未送信</div>':'')+'</div></div>';
+  }).join("");
+  document.querySelectorAll("#recentWrap .item").forEach(el=>{
+    el.onclick=()=>{ const r=ROWS.find(x=>x.id===el.dataset.id); if(r) openSheet(r); };
+  });
+}
+function updateStats(){
+  const rows=dayRows();
+  const ume=rows.filter(r=>r.sagyo==="埋木").reduce((s,r)=>s+(Number(r.taba)||0),0);
+  const ana=rows.filter(r=>r.sagyo==="穴あけ").reduce((s,r)=>s+(Number(r.taba)||0),0);
+  $("st-ume").textContent=ume.toLocaleString();
+  $("st-ana").textContent=ana.toLocaleString();
+  $("st-maisu").textContent=rows.reduce((s,r)=>s+(Number(r.maisu)||0),0).toLocaleString();
+  const np=QUEUE.length;
+  $("pendBadge").style.display=np?"block":"none";
+  $("st-pend").textContent=np;
+}
+function weekStart_(ds){ // 月曜起点
+  const d=new Date(ds+"T00:00:00");
+  const wd=(d.getDay()+6)%7;
+  d.setDate(d.getDate()-wd);
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+function sumTaba_(rows,sagyo){ return rows.filter(r=>r.sagyo===sagyo).reduce((s,r)=>s+(Number(r.taba)||0),0); }
+function renderSum(){
+  const today=todayStr(), ws=weekStart_(today), mon=today.slice(0,7);
+  const spans=[
+    ["今日",  ROWS.filter(r=>r.date===today)],
+    ["今週",  ROWS.filter(r=>r.date>=ws&&r.date<=today)],
+    ["今月",  ROWS.filter(r=>r.date.slice(0,7)===mon)],
+    ["累計",  ROWS],
+  ];
+  $("sumGrid").innerHTML='<div class="hd"></div><div class="hd">埋木</div><div class="hd">穴あけ</div>'+
+    spans.map(([lbl,rows])=>{
+      const u=sumTaba_(rows,"埋木"), a=sumTaba_(rows,"穴あけ");
+      return '<div class="lbl">'+lbl+'</div>'+
+        '<div class="val">'+u.toLocaleString()+'束<small>'+(u*MAI_PER_DAN).toLocaleString()+'枚</small></div>'+
+        '<div class="val">'+a.toLocaleString()+'束<small>'+(a*MAI_PER_DAN).toLocaleString()+'枚</small></div>';
+    }).join("");
+  if(!ROWS.length){ $("sumBody").innerHTML='<div class="empty">まだ記録がありません</div>'; return; }
+  const byDate={};
+  ROWS.forEach(r=>{ (byDate[r.date]=byDate[r.date]||[]).push(r); });
+  const dates=Object.keys(byDate).sort().reverse();
+  $("sumBody").innerHTML=dates.map(ds=>{
+    const rows=byDate[ds];
+    const total=rows.reduce((s,r)=>s+(Number(r.taba)||0),0);
+    const agg={};
+    rows.forEach(r=>{ const k=r.sagyo+"|"+r.len; agg[k]=agg[k]||{sagyo:r.sagyo,len:r.len,dan:0,pend:false}; agg[k].dan+=Number(r.dan)||0; if(r.sync==="pending") agg[k].pend=true; });
+    const order={"埋木":0,"穴あけ":1};
+    const lines=Object.values(agg).sort((a,b)=>(order[a.sagyo]??9)-(order[b.sagyo]??9)||a.len.localeCompare(b.len)).map(g=>
+      '<div class="row"><span class="sagyob" style="background:'+sagyoColor(g.sagyo)+'">'+esc(g.sagyo)+'</span>'+
+      '<span class="qty">'+esc(g.len)+'　'+g.dan.toLocaleString()+'段＝'+g.dan.toLocaleString()+'束</span>'+
+      '<span class="meta">'+(g.pend?'<span class="sync-p">●未送信</span> ':'')+(g.dan*MAI_PER_DAN).toLocaleString()+'枚</span></div>'
+    ).join("");
+    const dLabel=ds===today?ds+"（今日）":ds;
+    return '<div class="grp"><div class="grp-h"><span class="nm">'+esc(dLabel)+'</span><span class="sum">計 '+total.toLocaleString()+'束（8入）</span></div>'+lines+'</div>';
+  }).join("");
+}
+
+/* ===== 電卓 ===== */
+let calcExpr="";
+let calcTarget=null; // 結果の書き込み先（段数欄の🖩から開いたとき）
+function openCalc(target){
+  calcTarget=target||null;
+  $("calcApply").style.display=calcTarget?"":"none";
+  $("calcOvl").classList.add("show"); calcRender();
+}
+$("calcBtn").onclick=()=>openCalc(null);
+document.querySelectorAll(".calcmini").forEach(b=>{ b.onclick=()=>openCalc(b.dataset.t); });
+$("calcApply").onclick=()=>{
+  const v=calcEval(calcExpr);
+  if(v==null){ toast("計算式を確認してください"); return; }
+  $(calcTarget).value=Math.round(v);
+  $("calcOvl").classList.remove("show");
+  updateConv();
+};
+$("calcClose").onclick=()=>$("calcOvl").classList.remove("show");
+$("calcOvl").addEventListener("click",e=>{ if(e.target===$("calcOvl")) $("calcOvl").classList.remove("show"); });
+document.querySelectorAll(".ck").forEach(b=>{ b.onclick=()=>calcKey(b.dataset.k); });
+function calcEval(expr){
+  if(!expr||!/^[0-9+\-*/().\s]+$/.test(expr)) return null;
+  try{ const v=Function('"use strict";return('+expr+')')(); return (typeof v==="number"&&isFinite(v))?v:null; }catch(e){ return null; }
+}
+function calcKey(k){
+  if(k==="C") calcExpr="";
+  else if(k==="B") calcExpr=calcExpr.slice(0,-1);
+  else if(k==="="){ const v=calcEval(calcExpr); if(v!=null) calcExpr=String(Math.round(v*1e6)/1e6); }
+  else calcExpr+=k;
+  calcRender();
+}
+function calcRender(){
+  $("calcExpr").innerHTML=esc(calcExpr.replace(/\*/g,"×").replace(/\//g,"÷"))||"&nbsp;";
+  const v=calcEval(calcExpr);
+  $("calcRes").textContent=v!=null?v.toLocaleString(undefined,{maximumFractionDigits:6}):(calcExpr?"…":"0");
+}
+
+boot();
+</script>
+</body>
+</html>
