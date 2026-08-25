@@ -194,7 +194,6 @@ header{ position:sticky; top:0; z-index:50; background:var(--main); color:#fff;
       <button type="button" class="step" id="danPlus">＋</button>
     </div>
     <div id="sh-conv"></div>
-    <div class="fcol" style="margin-top:4px"><div class="flabel">入力者</div><div class="chips big" id="whoChips"></div></div>
     <div class="sh-btns">
       <button class="btn btn-del" id="sh-del" style="display:none">削除</button>
       <button class="btn btn-sub" id="sh-cancel">キャンセル</button>
@@ -298,7 +297,6 @@ function apiPost(action,body){
 /* ===== 状態 ===== */
 const ROWS_KEY="umeki_rows_cache_v1";
 const QUEUE_KEY="umeki_queue_v1";
-const WHO_KEY="umeki_who";
 let ROWS=[];             // 全行（サーバ＋未送信）。集計タブは全期間を使う
 let QUEUE=[];            // 未送信操作 [{op,data}]
 let editingId=null;      // シートで編集中の行id（null=新規）
@@ -311,6 +309,7 @@ function saveLS(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){
 function boot(){
   $("h-date").value=curDate;
   QUEUE=loadLS(QUEUE_KEY,[]);
+  QUEUE.forEach(q=>{ delete q.inflight; }); // リロード後は送信中フラグを必ず解除
   const c=creds();
   if(c.email&&c.pass){
     $("gate").style.display="none";
@@ -363,10 +362,13 @@ async function flushQueue(){
   try{
     while(QUEUE.length){
       const q=QUEUE[0];
+      q.inflight=true; // 送信中の追加を編集・削除でキュー上書きすると、送信済みの行がサーバーに孤児で残るため印を付ける
       const act=q.op==="add"?"umeAdd":q.op==="update"?"umeUpdate":"umeDelete";
-      const j=await apiPost(act,q.data);
+      let j;
+      try{ j=await apiPost(act,q.data); } finally{ delete q.inflight; }
       if(j&&(j.ok||j.dup||j.missing)){ QUEUE.shift(); saveLS(QUEUE_KEY,QUEUE); updateStats(); }
       else if(j&&j.error==="unauthorized"){ clearCreds(); showGate("ログインし直してください"); break; }
+      else if(j&&j.error==="not found"){ QUEUE.shift(); saveLS(QUEUE_KEY,QUEUE); } // 対象行が既にない→捨てる（キュー詰まり防止）
       else break; // サーバ側エラー→後で再試行
     }
   }catch(e){ /* オフライン等→後で再試行 */ }
@@ -397,27 +399,15 @@ function setTab(t){
 /* ===== 入力シート（チップ選択式）===== */
 const SAGYO_LIST=["埋木","穴あけ"];
 const LEN_LIST=["2m","3m","4m"];
-const WHO_LIST=["雅久","智恵子","大樹","楓"];
 const DAN_DEFAULT=20, DAN_MAX=99; // プルダウンは20起点で上下に選ぶ
-const CUSTOM_KEYS={who:"umeki_custom_who"};
-let selSagyo="",selLen="",selWho=localStorage.getItem(WHO_KEY)||"";
-if(selWho==="林大樹") selWho="大樹"; else if(selWho==="林楓") selWho="楓"; // 旧名の端末記憶を移行
-function customList(k){ return loadLS(CUSTOM_KEYS[k],[]); }
-function addCustom(k,v){ const l=customList(k); if(!l.includes(v)){ l.push(v); saveLS(CUSTOM_KEYS[k],l); } }
+let selSagyo="",selLen="";
 function chipsHtml(list,sel){ return list.map(v=>'<button type="button" class="chip'+(sel===v?" sel":"")+'" data-v="'+esc(v)+'">'+esc(v)+'</button>').join(""); }
 function bindChips(id,fn){ document.querySelectorAll("#"+id+" .chip").forEach(el=>{ el.onclick=()=>fn(el.dataset.v); }); }
 function renderChips(){
   $("sagyoChips").innerHTML=chipsHtml(SAGYO_LIST,selSagyo);
   $("lenChips").innerHTML=chipsHtml(LEN_LIST,selLen);
-  let wl=WHO_LIST.concat(customList("who"));
-  if(selWho&&!wl.includes(selWho)) wl=wl.concat([selWho]);
-  $("whoChips").innerHTML=chipsHtml(wl,selWho)+'<button type="button" class="chip add" data-v="__add">＋登録</button>';
   bindChips("sagyoChips",v=>{ selSagyo=v; renderChips(); });
   bindChips("lenChips",v=>{ selLen=v; renderChips(); });
-  bindChips("whoChips",v=>{
-    if(v==="__add"){ const nv=(prompt("登録する入力者名")||"").trim(); if(!nv) return; addCustom("who",nv); selWho=nv; renderChips(); }
-    else { selWho=v; renderChips(); }
-  });
 }
 $("bigAdd").onclick=()=>openSheet(null);
 function openSheet(row){
@@ -459,21 +449,19 @@ function updateConv(){
 $("sh-save").onclick=()=>{
   const dan=Math.floor(Number($("sh-dan").value||0));
   if(!(dan>0)){ toast("段数を入れてください"); return; }
-  if(!selWho){ toast("入力者を選んでください"); return; }
-  localStorage.setItem(WHO_KEY,selWho);
   if(editingId){
     const row=ROWS.find(r=>r.id===editingId); if(!row){ closeSheet(); return; }
     row.dan=dan; row.taba=dan; row.maisu=dan*MAI_PER_DAN;
     const qa=QUEUE.find(q=>q.op==="add"&&q.data.id===editingId);
-    if(qa){ qa.data.dan=dan; saveLS(QUEUE_KEY,QUEUE); flushQueue(); }
-    else { row.sync="pending"; enqueue("update",{id:editingId,dan}); }
+    if(qa&&!qa.inflight){ qa.data.dan=dan; saveLS(QUEUE_KEY,QUEUE); flushQueue(); }
+    else { row.sync="pending"; enqueue("update",{id:editingId,dan}); } // 送信中の追加はサーバーに載る前提でupdateを積む
     toast("修正しました");
   } else {
     if(!selSagyo){ toast("作業（埋木/穴あけ）を選んでください"); return; }
     if(!selLen){ toast("長さを選んでください"); return; }
-    const row={ id:newId(), date:curDate, sagyo:selSagyo, len:selLen, dan, taba:dan, maisu:dan*MAI_PER_DAN, who:selWho, ts:"", sync:"pending" };
+    const row={ id:newId(), date:curDate, sagyo:selSagyo, len:selLen, dan, taba:dan, maisu:dan*MAI_PER_DAN, who:"", ts:"", sync:"pending" };
     ROWS.push(row);
-    enqueue("add",{id:row.id,date:row.date,sagyo:row.sagyo,len:row.len,dan,who:selWho});
+    enqueue("add",{id:row.id,date:row.date,sagyo:row.sagyo,len:row.len,dan});
     toast("記録: "+selSagyo+" "+selLen+" "+dan+"段 = "+dan+"束");
   }
   saveLS(ROWS_KEY,ROWS);
@@ -483,9 +471,9 @@ $("sh-del").onclick=()=>{
   if(!editingId) return;
   if(!confirm("この記録を削除しますか？")) return;
   ROWS=ROWS.filter(r=>r.id!==editingId);
-  const qi=QUEUE.findIndex(q=>q.op==="add"&&q.data.id===editingId);
+  const qi=QUEUE.findIndex(q=>q.op==="add"&&q.data.id===editingId&&!q.inflight);
   if(qi>=0){ QUEUE.splice(qi,1); saveLS(QUEUE_KEY,QUEUE); }
-  else enqueue("delete",{id:editingId});
+  else enqueue("delete",{id:editingId}); // 送信中/送信済みの追加はサーバー側も消す
   saveLS(ROWS_KEY,ROWS);
   toast("削除しました");
   closeSheet(); renderAll();
@@ -504,7 +492,7 @@ function renderRecent(){
   $("recentWrap").innerHTML='<div class="flabel" style="margin:8px 2px 6px">'+esc(dayLabel)+'の記録（タップで修正）</div>'+rows.slice().reverse().map(r=>{
     return '<div class="item" data-id="'+esc(r.id)+'">'+
       '<div><div class="nm"><span class="sagyob" style="background:'+sagyoColor(r.sagyo)+'">'+esc(r.sagyo)+'</span>'+esc(r.len)+'</div>'+
-      '<div class="spec">'+esc(r.who||"")+'　'+esc((r.ts||"").slice(11,16))+'</div></div>'+
+      '<div class="spec">'+esc((r.ts||"").slice(11,16))+'</div></div>'+
       '<div class="cnt"><span class="done">'+(Number(r.dan)||0)+'段＝'+(Number(r.taba)||0)+'束</span>'+
       (r.sync==="pending"?'<div class="sync-p">●未送信</div>':'')+'</div></div>';
   }).join("");
